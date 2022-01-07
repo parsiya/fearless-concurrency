@@ -48,7 +48,7 @@ fn main() {
 `expect`: The result of `read_line` is an enum of type `io::Result`. It can be
 `Ok` or `Err`. If the value is `Err` then `expect` is called that crashes the
 program and displays the message passed to it (`Failed to`). If the value is
-`Ok` then `expectq will return the number of bytes read which we are not using
+`Ok` then `expect` will return the number of bytes read which we are not using
 here. We can use it like this:
 
 ```rs
@@ -63,7 +63,7 @@ println!("Read {} bytes", bytes);
 Finally, we have the placeholder similar to `printf(%v)` in Go.
 
 ## Dependencies
-Edit `Cargo.toml` and add depdencies like `rand = "0.8.3"`. Then `cargo build`.
+Edit `Cargo.toml` and add dependencies like `rand = "0.8.3"`. Then `cargo build`.
 
 `cargo update` ignores `Cargo.lock` and grabs the latest versions of libraries
 (that fit the versions specified in `Cargo.toml`).
@@ -182,9 +182,9 @@ let guess: u32 = match guess.trim().parse() {
 };
 ```
 
-If `parse` worked correcly it returns an `Ok` value that contains the number.
+If `parse` worked correctly it returns an `Ok` value that contains the number.
 Otherwise, it returns an `Err` with the error message. In `Err(_)` we are
-cathing every message (with `_`).
+catching every message (with `_`).
 
 # Chapter 3
 Some programming concepts in Rust.
@@ -204,7 +204,7 @@ const FIRST_NAME = "Parsia";
 const TIME: u32 = 10 * 20 * 30;
 ```
 
-Naming convetion: All uppercase with underscore between words.
+Naming convention: All uppercase with underscore between words.
 
 ## Shadowing
 Declare a variable with the same name. Interestingly, this can be done in
@@ -230,11 +230,11 @@ fn main() {
 
 Seems like we can just make blocks with `{ }`.
 
-Differences with mut:
+Differences with `mut`:
 
 1. We can shadow an immutable variable and create an immutable variable with the
    same name.
-2. We can change the type and reuse them name. We cannot change the type of a
+2. We can change the type and reuse the name. We cannot change the type of a
    mutable variable.
 
 This works because we are shadowing `spaces` and creating a new variable of type
@@ -281,7 +281,7 @@ fn main() {
 }
 ```
 
- The shadowing `spaces` (2nd one) is mutable but not modified so we get:
+The shadowing `spaces` (2nd one) is mutable but not modified so we get:
 
 ```
 Compiling playground v0.0.1 (/playground)
@@ -408,7 +408,43 @@ fn main() {
 }
 ```
 
-## String Literal vs. String
+Specify one initial value for all elements:
+
+```rs
+// these are the same
+let a = [3; 5];
+let b = [3, 3, 3, 3, 3];
+```
+
+Access array elements like most other languages:
+
+```rs
+let arr = [1, 2, 3];
+let b = arr[0]; // b = 1;
+```
+
+It's possible to access elements beyond the capacity. If the value is known when
+compiling, the Rust compiler will give us an error:
+
+```rs
+fn main() {
+    
+    let arr2: [&str; 3] = ["one", "two", "three"];
+    println!("arr2 = {:?}", arr2);
+    
+    println!("arr2[3] = {}", arr2[3]);
+                         //  ^^^^^^^ index out of bounds: the length is 3 but the index is 3
+    
+    let c = 1 + 2;
+    println!("arr2[c] = {}", arr2[c]);
+                         //  ^^^^^^^ index out of bounds: the length is 3 but the index is 3
+}
+```
+
+However, we can provide a dynamic variable (e.g., get it from the user) and the
+program will panic with an out of bounds access.
+
+## String Literals
 So I had this problem above, when you create something like this
 `let a = "whatever";` you are creating a `string literal` or `&str` which is a
 read-only string and not the same as the type `String`.
@@ -445,42 +481,6 @@ println!("arr2 = {:#?}", arr2);
 //     "three",
 // ]
 ```
-
-Specify one initial value for all elements:
-
-```rs
-// these are the same
-let a = [3; 5];
-let b = [3, 3, 3, 3, 3];
-```
-
-Access array elements like most other languages:
-
-```rs
-let arr = [1, 2, 3];
-let b = arr[0]; // b = 1;
-```
-
-It's possible to access elements beyond the capacity. If we the value is known
-when compiling, the Rust compiler will give us an error:
-
-```rs
-fn main() {
-    
-    let arr2: [&str; 3] = ["one", "two", "three"];
-    println!("arr2 = {:?}", arr2);
-    
-    println!("arr2[3] = {}", arr2[3]);
-                         //  ^^^^^^^ index out of bounds: the length is 3 but the index is 3
-    
-    let c = 1 + 2;
-    println!("arr2[c] = {}", arr2[c]);
-                         //  ^^^^^^^ index out of bounds: the length is 3 but the index is 3
-}
-```
-
-However, we can provide a dynamic variable (e.g., get it from the user) and the
-program will panic with an out of bounds access.
 
 ## Functions
 Similar to other languages.
@@ -700,5 +700,480 @@ fn main() {
 // LIFTOFF!!!
 ```
 
+# Chapter 4
+Stack: LIFO. Data on stack must have a known and fixed size. Faster.
 
+Heap: Data with unknown size at compile time or a size that might change. You
+ask for a certain amount of space on heap, the memory allocator locates some
+free space and returns a pointer to it (and sets it in-use). Slower.
+
+## Ownership Rules
+
+* Each value in Rust has a variable that’s called its *owner*.
+* There can only be one owner at a time.
+* When the owner goes out of scope, the value will be dropped.
+
+## The String Type
+String literals are immutable (type `&str`). See the section `String Literals`
+above for more info.
+
+We can use `String` which exists on the heap. We can create them from a string
+literal and modify it.
+
+```rs
+fn main() {
+    let mut s = String::from("hello");
+    
+    // append something to it with push_str
+    s.push_str(", world!");
+    
+    // we cannot do this because it's not a string literal.
+    // println!(s); // Compiler error
+
+    // print it
+    println!("{}", s); // hello, world!
+}
+```
+
+## Move
+When the value leaves the scope, Rust automatically calls `drop` at the closing
+curly braces. A String has three parts:
+
+1. ptr: Pointer to the memory with the values.
+2. len: Number of bytes used by the String.
+3. cap: Total number of bytes of memory assigned to the String by the allocator.
+
+Let's create a String and then assign it to another variable like this:
+
+```rs
+let s1 = String::from("hello");
+let s2 = s1;
+```
+
+The `ptr` in both s1 and s2 will point to the same location on the heap with the
+value of the string. The value is not copied for s2.
+
+When both s1 and s2 go out of scope we might have gotten a double-free bug
+because both wanted to free the memory. To prevent this issue, Rust makes s1
+invalid as soon as the assignment happens (`let s2 = s1;`). We cannot use s1
+after that.
+
+```rs
+fn main() {
+    // create a String.
+    let s1 = String::from("hello");
+    // assign it to s2
+    let s2 = s1;
+    // try to use s1.
+    println!("{}", s1);
+    // use s2 so we don't get an "unused variable warning"
+    println!("{}", s2);
+}
+```
+
+And we get an error because s1 was moved.
+
+```
+error[E0382]: borrow of moved value: `s1`
+ --> src/main.rs:7:20
+  |
+3 |     let s1 = String::from("hello");
+  |         -- move occurs because `s1` has type `String`, which does not implement the `Copy` trait
+4 |     // assign it to s2
+5 |     let s2 = s1;
+  |              -- value moved here
+6 |     // try to use s1.
+7 |     println!("{}", s1);
+  |                    ^^ value borrowed here after move
+```
+
+## Clone
+But what if we want to make a copy? We use `clone`.
+
+```rs
+fn main() {
+    // create a String.
+    let s1 = String::from("hello");
+    // clone it
+    let s2 = s1.clone();
+    // try to use s1
+    println!("{}", s1); // hello
+    // use s2 so we don't get an "unused variable warning"
+    println!("{}", s2); // hello
+}
+```
+
+## Copy
+But we have seen assignments in other types and both work.
+
+```rs
+fn main() {
+    let x = 5;
+    let y = x;
+    
+    // we can use both x and y.
+    println!("x = {}, y = {}", x, y); // x = 5, y = 5
+}
+```
+
+These types have a known size at compile time and are stored on the stack. So
+assignment here creates a new copy of the entire object on the stack.
+
+If a type has the `Copy` trait, this behavior occurs: Integers, floats, chars,
+bools, and Tuples if the types in it have all implemented the `Copy` trait.
+
+## Ownership and Functions
+Passing a value to a function will move or copy a value like an assignment.
+
+```rs
+// ch04/func_string.rs
+fn main() {
+    // create a string
+    let s = String::from("hello"); 
+
+    // pass it to a function
+    use_string(s);
+
+    // we cannot use s here anymore because it was moved to `some_string` and
+    // it went out of scope when `use_string` returned.
+    println!("{}", s);
+}
+
+fn use_string(some_string: String) {
+    println!("{}", some_string);
+    // some_string goes out of scope. drop is called. Memory is freed.
+}
+```
+
+We get an error because `s` was moved when passed to the function.
+
+```
+error[E0382]: borrow of moved value: `s`
+  --> src/main.rs:10:20
+   |
+3  |     let s = String::from("hello"); 
+   |         - move occurs because `s` has type `String`, which does not implement the `Copy` trait
+...
+6  |     use_string(s);
+   |                - value moved here
+...
+10 |     println!("{}", s);
+   |                    ^ value borrowed here after move
+```
+
+But we won't have this issue if the type implements the `Copy` trait (e.g., int).
+
+```rs
+// ch04/func_int.rs
+fn main() {
+    // create an int
+    let x = 5;
+
+    // x does not move because i32 implements `Copy`.
+    use_int(x); // 5
+                
+    // we can still use x here.
+    println!("{}", x);  // 5
+}
+
+fn use_int(some_integer: i32) {
+    println!("{}", some_integer);
+} // some_integer goes out of scope. Nothing special happens.
+```
+
+Same thing happens with returns. If we pass a String to a function, we need to
+return it from the function to be able to use it later.
+
+## References
+To avoid this whole mess of moving when passing variables to function we can use
+references. A reference refers to the variable but does not own it. So when we
+pass a reference to the function there will be no moves.
+
+`We call the action of creating a reference borrowing.`
+
+```rs
+fn main() {
+    // create a string
+    let s1 = String::from("hello");
+    // pass it as a reference to calculate_length
+    let len = calculate_length(&s1);
+    // we can still use s1 here.
+    println!("The length of '{}' is {}.", s1, len);
+    // The length of 'hello' is 5.
+}
+
+// note the annotation here, the param type is &String
+fn calculate_length(s: &String) -> usize {
+    return s.len();
+    // `s.len()` would do the same
+}
+```
+
+When `s` goes out of scope at the end of the function, the value for `s1` is not
+dropped because `s` does not own it.
+
+We cannot modify `s` inside.
+
+```rs
+fn main() {
+    // create a string
+    let s1 = String::from("hello");
+    // pass it as a reference
+    modify_s(&s1);
+}
+
+fn modify_s(s: &String) {
+    s.push_str(" yolo!");
+}
+```
+
+We get an error.
+
+```
+error[E0596]: cannot borrow `*s` as mutable, as it is behind a `&` reference
+ --> src/main.rs:9:5
+  |
+8 | fn modify_s(s: &String) {
+  |                ------- help: consider changing this to be a mutable reference: `&mut String`
+9 |     s.push_str(" yolo!");
+  |     ^^^^^^^^^^^^^^^^^^^^ `s` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+```
+
+Let's use the suggestion and pass a mutable reference to the function.
+
+```rs
+fn main() {
+    // create a string
+    let s1 = String::from("hello");
+    // pass it as a reference
+    modify_mut_s(&mut s1);
+}
+
+fn modify_mut_s(s: &mut String) {
+    s.push_str(" yolo!");
+}
+```
+
+We get another error because `s1` is not mutable we cannot borrow it as mutable.
+
+```
+error[E0596]: cannot borrow `s1` as mutable, as it is not declared as mutable
+ --> src/main.rs:5:18
+  |
+3 |     let s1 = String::from("hello");
+  |         -- help: consider changing this to be mutable: `mut s1`
+4 |     // pass it as a reference
+5 |     modify_mut_s(&mut s1);
+  |                  ^^^^^^^ cannot borrow as mutable
+```
+
+Let's make `s1` mutable, too.
+
+```rs
+fn main() {
+    // create a mutable string
+    let mut s1 = String::from("hello");
+    // pass it as a mutable reference
+    modify_mut_s(&mut s1);
+    
+    println!("{}", s1); // hello yolo!
+}
+
+fn modify_mut_s(s: &mut String) {
+    s.push_str(" yolo!");
+}
+```
+
+And this works! Remember that although `s1` is mutable, we could have borrowed
+it as immutable.
+
+## Mutable References
+We can only have one mutable reference to a value at a time. This code won't
+work:
+
+```rs
+fn main() {
+    // create a mutable string
+    let mut s1 = String::from("hello");
+    
+    let r1 = &mut s1;
+    let r2 = &mut s1;
+
+    println!("{}, {}", r1, r2);
+}
+```
+
+We get this error:
+
+```
+error[E0499]: cannot borrow `s1` as mutable more than once at a time
+ --> src/main.rs:6:14
+  |
+5 |     let r1 = &mut s1;
+  |              ------- first mutable borrow occurs here
+6 |     let r2 = &mut s1;
+  |              ^^^^^^^ second mutable borrow occurs here
+7 | 
+8 |     println!("{}, {}", r1, r2);
+  |                        -- first borrow later used here
+```
+
+This supposedly helps with data races.
+
+We cannot also have mutable and immutable borrows at the same time.
+
+```rs
+fn main() {
+    let mut s = String::from("hello");
+
+    let r1 = &s; // no problem
+    let r2 = &s; // no problem
+    let r3 = &mut s; // BIG PROBLEM
+
+    println!("{}, {}, and {}", r1, r2, r3);
+}
+```
+
+Because we have an immutable reference in the same scope. Multiple immutable
+references are allowed.
+
+```
+error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immutable
+ --> src/main.rs:6:14
+  |
+4 |     let r1 = &s; // no problem
+  |              -- immutable borrow occurs here
+5 |     let r2 = &s; // no problem
+6 |     let r3 = &mut s; // BIG PROBLEM
+  |              ^^^^^^ mutable borrow occurs here
+7 | 
+8 |     println!("{}, {}, and {}", r1, r2, r3);
+  |                                -- immutable borrow later used here
+```
+
+## Reference Scope
+The scope of a reference starts from where it's introduced until the last time
+it is used even though the block has not finished. It's a bit different from
+variable references. E.g., this will work because r1 and r2 are not used after
+r3 is created.
+
+```rs
+fn main() {
+    let mut s = String::from("hello");
+
+    let r1 = &s; // no problem
+    let r2 = &s; // no problem
+    println!("{} and {}", r1, r2);
+    // variables r1 and r2 will not be used after this point
+
+    let r3 = &mut s; // no problem
+    println!("{}", r3);
+}
+```
+
+## Dangling Reference
+The compiler does not allow us to create dangling references. This won't work:
+
+```rs
+fn main() {
+    let reference_to_nothing = dangle();
+}
+
+fn dangle() -> &String {
+    let s = String::from("hello");
+
+    &s
+}
+```
+
+`dangle` creates s and wants to return a reference to it. However, after dangle
+returns, s goes out of scope and is deallocated. Hence, a dangling reference.
+The compiler returns an error. Instead, we can return the `s`.
+
+```
+this function's return type contains a borrowed value, but there is no value for
+it to be borrowed from help: consider using the `'static` lifetime
+```
+
+## The Slice Type
+Similar to slice in Go? You can reference a sequence in a collection without
+ownership.
+
+Small function to find the index of the first word in a string.
+
+```rs
+fn first_word(s: &String) -> usize {
+    // converts the string to an array of bytes
+    let bytes = s.as_bytes();
+
+    // bytes.iter.enumerate() returns a tuple. The index and a reference to the item
+    // here we are destructuring the tuple
+    for (i, &item) in bytes.iter().enumerate() {
+        // compare the character with space
+        if item == b' ' {
+            return i;
+        }
+    }
+
+    // if there's no space in the string, all of it is the word
+    s.len()
+}
+```
+
+However, this is not useful because it's an index to a string that might have
+been modified since then. Instead, we can return a String slice with the words.
+
+## String Slice
+Create it like this. Note the second index is exclusive. E.g., `[0..5]` starts
+from index 0 and ends at 4.
+
+```rs
+fn main() {
+    let s = String::from("hello world");
+
+    let hello = &s[0..5];
+    let world = &s[6..11];
+
+    println!("{} - {}", hello, world);
+}
+```
+
+We can drop the lower range if we want to start from the beginning. So `[0..5]`
+and `[..5]` are the same.
+
+If the higher range is the end we can drop it. E.g., `[4..]` goes from index 4
+to the end.
+
+`[..]` creates a slice from the whole string. `let slice = &s[..]`. Now, we can
+rewrite the function to return a slice.
+
+```rs
+fn first_word(s: &String) -> &str {
+    let bytes = s.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return &s[0..i];
+        }
+    }
+
+    &s[..]
+}
+```
+
+**String literals are slices.** Remember what we saw in the string literal
+section? Their type is `&str`.
+
+## Other Slices
+We can create slices of other types.
+
+```rs
+fn main() {
+
+    let a = [1, 2, 3, 4, 5];
+    let slice = &a[1..3];
+    
+    println!("{:?}", slice);    // [2, 3]
+}
+```
 
