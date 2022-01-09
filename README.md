@@ -25,8 +25,8 @@ Every variable is immutable, have to make it mutable with `mut`:
 
 References passed to functions can also be mutable or not regardless of the
 underlying variable. E.g., we can create an immutable reference to a mutable
-variable. In the code below `read_line` needs a `mut string`, so we pass `&mut
-guess` instead of just `&guess`.
+variable. In the code below `read_line` needs a `mut string`, so we pass
+`&mut guess` instead of just `&guess`.
 
 `read_line` appends whatever is read from the command line to the argument. It
 does not overwrite anything. Here, it doesn't matter because `guess` is empty.
@@ -1176,4 +1176,435 @@ fn main() {
     println!("{:?}", slice);    // [2, 3]
 }
 ```
+
+# Chapter 5
+
+## Structs
+Similar to other programming languages.
+
+```rs
+// ch05/basic_struct.rs
+// define a struct
+struct Game {
+        name: String,
+        hours_played: u32,
+        path: String,
+}
+
+fn main() {
+
+    // create a mutable object
+    let mut game1 = Game {
+        name: String::from("Windows Calculator"),
+        hours_played: 123,
+        path: String::from("C:/Windows/System32/calc.exe"),
+    };
+    
+    // access fields
+    println!("{}, {}, {}", game1.name, game1.hours_played, game1.path);
+    // Windows Calculator, 123, C:/Windows/System32/calc.exe
+    
+    // change fields
+    game1.path = String::from("C:\\Windows\\System32\\calc.exe");
+    // print the modified field
+    println!("{}", game1.path);
+    // C:\Windows\System32\calc.exe
+}
+```
+
+We cannot set specific fields to mutable. Whole object needs to be mutable or
+not.
+
+## Field Init Shorthand
+Let's say we have this function to create a new `Game` object.
+
+```rs
+fn build_game(name: String, hours_played: u32, path: String) -> Game {
+    Game {
+        name: name,
+        hours_played: hours_played,
+        path: path,
+    }
+
+    // apparently using the return keyword is _bad_.
+}
+```
+
+If the name of the field and the variable with the value is the same like the
+above we can do a shorthand like this.
+
+```rs
+// complete example in ch05/field_init_shorthand.rs
+fn build_game(name: String, hours_played: u32, path: String) -> Game {
+    Game {
+        name,
+        hours_played,
+        path,
+    }
+}
+```
+
+## Struct Update Syntax
+We can create a new object with the values from a previous object and only
+modify some.
+
+```rs
+// complete example in ch05/struct_update.rs
+
+fn main() {
+
+    // create a game object
+    let game1 = Game {
+        name: String::from("Windows Calculator"),
+        hours_played: 123,
+        path: String::from("C:/Windows/System32/calc.exe"),
+    };
+    
+    // create game2 based on game1 with a new path
+    let game2 = Game {
+        path: String::from("C:\\Windows\\System32\\calc.exe"),
+        ..game1
+    };
+    
+    // access fields
+    println!("{}, {}, {}", game2.name, game2.hours_played, game2.path);
+    // Windows Calculator, 123, C:\Windows\System32\calc.exe
+}
+```
+
+**However, we moved game1 so we cannot use it anymore.** Because we used the
+value of `String` for the `name` field. If we had only copied the fixed-length
+values of `game1` then we would have been able to use it. Here's an example to
+show that.
+
+Note how `print_game` accepts a reference, if we had passed the
+actual object it would have been moved after calling the function and we could
+not have used it anymore.
+
+```rs
+// ch05/struct_update_move.rs
+// define a struct
+struct Game {
+    name: String,
+    hours_played: u32,
+    path: String,
+}
+
+fn print_game(game: &Game) {
+    println!("{}, {}, {}", game.name, game.hours_played, game.path);
+}
+
+fn main() {
+
+    // create a game object
+    let game1 = Game {
+        name: String::from("Windows Calculator"),
+        hours_played: 123,
+        path: String::from("C:/Windows/System32/calc.exe"),
+    };
+    
+    // create game1_new based on game1 but only reuse hours_played which is the
+    // only fixed-length field
+    let game1_new = Game {
+        name: String::from("Guild Wars"),
+        path: String::from("C:/Guild Wars/gw.exe"),
+        ..game1
+    };
+    
+    // we can still use game1 here because we did not "move" any of the Strings
+    // create game2 based on game1 with a new path
+    print_game(&game1);
+    // Windows Calculator, 123, C:/Windows/System32/calc.exe
+    
+    print_game(&game1_new);
+    // Guild Wars, 123, C:/Guild Wars/gw.exe
+    
+    // create game2_new but reuse the Strings so they are "moved"
+    let game1_new_new = Game {
+        hours_played: 6000,
+        ..game1
+    };
+    
+    // we cannot use game1 anymore.
+    print_game(&game1);  // <-- error here
+    print_game(&game1_new_new);
+}
+```
+
+We get an error in the last `print_game(&game1)` because `game1` was partially
+moved when creating `game1_new_new`.
+
+```
+error[E0382]: borrow of partially moved value: `game1`
+  --> src/main.rs:44:16
+   |
+38 |       let game1_new_new = Game {
+   |  _________________________-
+39 | |         hours_played: 6000,
+40 | |         ..game1
+41 | |     };
+   | |_____- value partially moved here
+...
+44 |       print_game(&game1);  // <-- error here
+   |                  ^^^^^^ value borrowed here after partial move
+   |
+   = note: partial move occurs because `game1.path` has type `String`, which does not implement the `Copy` trait
+```
+
+## Tuple Structs
+Think of them as structs but without field names. We can access the fields by
+index (see in `print_game`).
+
+```rs
+// ch05/tuple_struct.rs
+
+// define two tuple structs
+struct Game(String, u32, String);
+struct App(String, u32, String);
+
+fn print_game(game: &Game) {
+    // we can access the tuple struct's fields with the index
+    println!("{}, {}, {}", game.0, game.1, game.2);
+}
+
+fn main() {
+
+    let game1 = Game(
+        String::from("Guild Wars"),
+        5000,
+        String::from("C:/Guild Wars/gw.exe")
+    );
+    
+    print_game(&game1);
+    // Guild Wars, 5000, C:/Guild Wars/gw.exe
+    
+    let app1 = App(
+        String::from("Windows Calculator"),
+        123,
+        String::from("C:/Windows/System32/Calc.exe")
+    );
+    
+    // we cannot call print_game with &App because they are different structs
+    // although they have the same fields
+    print_game(&app1);  // <-- error 'expected struct `Game`, found struct `App`'
+}
+```
+
+`Game` and `App` are different structs although they have similar fields.
+
+## Unit-Like Structs
+They don't have any fields.
+
+```rs
+struct Whatever;
+
+let wt = Whatever;
+```
+
+## Derived Traits
+We cannot use `println!` to print the `Game` struct.
+
+```rs
+struct Game {
+    name: String,
+    hours_played: u32,
+    path: String,
+}
+
+fn main() {
+
+    let game1 = Game {
+        name: String::from("Guild Wars"),
+        hours_played: 5000,
+        path: String::from("C:/Guild Wars/gw.exe")
+    };
+    
+    println!("{}", game1);
+}
+```
+
+We get an error in `println!` because it does not implement the
+`std::fmt::Display` trait.
+
+```
+error[E0277]: `Game` doesn't implement `std::fmt::Display`
+  --> src/main.rs:15:20
+   |
+15 |     println!("{}", game1);
+   |                    ^^^^^ `Game` cannot be formatted with the default formatter
+   |
+   = help: the trait `std::fmt::Display` is not implemented for `Game`
+   = note: in format strings you may be able to use `{:?}` (or {:#?} for pretty-print) instead
+```
+
+The error tells us we can use `println!("{:?}", game1);` which results in
+another error:
+
+```
+error[E0277]: `Game` doesn't implement `Debug`
+  --> src/main.rs:15:22
+   |
+15 |     println!("{:?}", game1);
+   |                      ^^^^^ `Game` cannot be formatted using `{:?}`
+   |
+   = help: the trait `Debug` is not implemented for `Game`
+   = note: add `#[derive(Debug)]` to `Game` or manually `impl Debug for Game`
+   = note: this error originates in the macro `$crate::format_args_nl` (in Nightly builds, run with -Z macro-backtrace for more info)
+```
+
+Let's add `#[derive(Debug)]` to `Game`.
+
+```rs
+#[derive(Debug)]
+struct Game {
+    name: String,
+    hours_played: u32,
+    path: String,
+}
+
+fn main() {
+
+    let game1 = Game {
+        name: String::from("Guild Wars"),
+        hours_played: 5000,
+        path: String::from("C:/Guild Wars/gw.exe")
+    };
+    
+    println!("{:?}", game1);
+}
+```
+
+Finally:
+`Game { name: "Guild Wars", hours_played: 5000, path: "C:/Guild Wars/gw.exe" }`.
+
+## The dbg Macro
+We can use the `dbg!` macro to print to `stderr` (`println!` prints to
+`stdout`). It prints info about the parameter and returns their ownership. We
+can also pass references to it.
+
+```rs
+#[derive(Debug)]
+struct Game {
+    name: String,
+    hours_played: u32,
+    path: String,
+}
+
+fn main() {
+
+    let game1 = Game {
+        name: String::from("Guild Wars"),
+        hours_played: dbg!(5000),
+        path: String::from("C:/Guild Wars/gw.exe")
+    };
+    
+    dbg!(&game1);
+}
+```
+
+The result:
+
+```
+[src/main.rs:12] 5000 = 5000
+[src/main.rs:16] &game1 = Game {
+    name: "Guild Wars",
+    hours_played: 5000,
+    path: "C:/Guild Wars/gw.exe",
+}
+```
+
+## Methods
+We can convert `print_game` into a method that we can call on `Game` objects.
+They are defined similar to normal functions, but their first param is always
+`self`.
+
+```rs
+// ch05/method1.rs
+struct Game {
+    name: String,
+    hours_played: u32,
+    path: String,
+}
+
+impl Game {
+    // implement print for Game
+    fn print(&self) {
+        println!("{}, {}, {}", self.name, self.hours_played, self.path);
+    }
+}
+
+fn main() {
+
+    let game1 = Game {
+        name: String::from("Guild Wars"),
+        hours_played: 5000,
+        path: String::from("C:/Guild Wars/gw.exe"),
+    };
+    
+    game1.print();
+    // Guild Wars, 5000, C:/Guild Wars/gw.exe
+}
+```
+
+Note how we are passing `&self` to `print`. Methods can also take ownership of
+`self` and other parameters.
+
+We can name a method the same as a field. Usually, these are getters and return
+the value of the field.
+
+```rs
+impl Game {
+    fn name(&self) -> String {
+        self.name
+    }
+}
+```
+
+Now, we can call `game1.name()` to get the value of `name`.
+
+## Automatic Referencing and Dereferencing
+When calling methods, Rust automatically add `&`, `&mut`, or `*` to the object
+to match the method signature. Hence, why we did not do `(&game1).print()`
+although the receiver was `&self`.
+
+## Associated Functions
+Functions inside an `impl` block are called `associated functions` because they
+are associated with a struct.
+
+We can define non-method associated functions (they do not have the `&self`
+param). Let's add a function that creates a game object for calc.
+
+```rs
+// ch05/associated_method_calc.rs
+struct Game {
+    name: String,
+    hours_played: u32,
+    path: String,
+}
+
+impl Game {
+
+    fn print(&self) {
+        println!("{}, {}, {}", self.name, self.hours_played, self.path);
+    }
+
+    fn calc() -> Game {
+        Game {
+            name: String::from("Windows Calculator"),
+            hours_played: 0,
+            path: String::from("C:/Windows/System32/calc.exe"),
+        }
+    }
+}
+
+fn main() {
+    let calc = Game::calc();
+    calc.print();
+    // Windows Calculator, 0, C:/Windows/System32/calc.exe
+}
+```
+
+We can call it with `Game::calc()` similar to `String::from(...)`.
+
+**We can have multiple impl blocks**.
 
