@@ -1608,3 +1608,198 @@ We can call it with `Game::calc()` similar to `String::from(...)`.
 
 **We can have multiple impl blocks**.
 
+# Chapter 6
+
+## Define an Enum
+We can create an enum:
+
+```rs
+enum AppType {
+    Utility,
+    Game,
+}
+
+// get an enum
+let util = AppType::Utility;
+```
+
+We can define functions that take a param of type `AppType`. Revamping the
+game example from before:
+
+```rs
+// ch06/enum1.rs
+
+// needed to print the AppType values
+#[derive(Debug)]
+enum AppType {
+    Utility,
+    Game,
+} 
+
+struct App {
+    name: String,
+    hours_played: u32,
+    path: String,
+    app_type: AppType,
+}
+
+impl App {
+
+    fn print(&self) {
+        println!(
+            "Name: {}, Hours played: {}, Path: {}, Type: {:?}",
+            self.name,
+            self.hours_played,
+            self.path,
+            self.app_type
+        );
+    }
+}
+
+fn main() {
+
+    let calc = App {
+        name: String::from("Windows Calculator"),
+        hours_played: 123,
+        path: String::from("C:/Windows/System32/calc.exe"),
+        app_type: AppType::Utility,
+    };
+
+    calc.print();
+    // Name: Windows Calculator, Hours played: 123, Path: C:/Windows/System32/calc.exe, Type: Utility
+}
+```
+
+Note how I have used `#[derive(Debug)]` before the enum to print its value with
+`{:?}`. Otherwise it does not work.
+
+We can also ditch the struct and do everything in the enum.
+
+```rs
+// ch06/enum2.rs
+#[derive(Debug)]
+enum AppType {
+    // name and path.
+    Utility(String, String),
+    // name, path, hours_played
+    Game(String, String, u32),
+}
+
+fn main() {
+    let calc = AppType::Utility(
+        String::from("Windows Calculator"),
+        String::from("C:/Windows/System32/calc.exe"),
+    );
+
+    let gw = AppType::Game(
+        String::from("Guild Wars"),
+        String::from("C:/Guild Wars/gw.exe"),
+        5000,
+    );
+
+    println!("{:?}", calc);
+    // Utility("Windows Calculator", "C:/Windows/System32/calc.exe")
+    
+    println!("{:?}", gw);
+    // Game("Guild Wars", "C:/Guild Wars/gw.exe", 5000)
+}
+```
+
+We can also define structs and pass them as a parameter to the enum function.
+
+```rs
+// ch06/enum3.rs
+#[derive(Debug)]
+struct GameStruct {
+    name: String,
+    path: String,
+    hours_played: u32,
+}
+
+#[derive(Debug)]
+struct UtilStruct {
+    name: String,
+    path: String,
+}
+
+#[derive(Debug)]
+enum AppType {
+    Game(GameStruct),
+    Utility(UtilStruct),
+}
+
+fn main() {
+    let calc = AppType::Utility(UtilStruct {
+        name: String::from("Windows Calculator"),
+        path: String::from("C:/Windows/System32/calc.exe"),
+    });
+    
+    println!("{:?}", calc);
+    // Utility(UtilStruct { name: "Windows Calculator", path: "C:/Windows/System32/calc.exe" })
+}
+```
+
+We can have different things in the enum like the example from the book:
+
+```rs
+enum Message {
+    // no data associated with it.
+    Quit,
+    // named fields like a struct
+    Move { x: i32, y: i32 },
+    Write(String),
+    ChangeColor(i32, i32, i32),
+}
+```
+
+## Enum Methods and match
+We can also have enum methods. Let's define the new `print` method that returns
+a String that represents each enum.
+
+```rs
+// ch06/enum4.rs
+enum AppType {
+    Game(GameStruct),
+    Utility(UtilStruct),
+}
+
+impl AppType {
+    fn stringer(&self) -> String {
+        match self {
+            AppType::Game(g) => format!(
+                "Name: {}, Path: {}, Hours Played: {}",
+                g.name, g.path, g.hours_played
+            ),
+            AppType::Utility(u) => format!("Name: {}, Path: {}", u.name, u.path),
+        }
+    }
+}
+```
+
+Note how we are using `match` and are able to access the enum parameters (in
+this case structs). The `format!` macro returns a formatted `String`.
+
+## Option Enum
+Rust does not have null but the `Option` enum allows us to have `None`.
+
+```rs
+enum Option<T> {
+    None,
+    Some(T),
+}
+```
+
+We can use `Some` and `None` directly without importing anything.
+`<T> == lol yes generics`.
+
+```rs
+// Option<i32>
+let some_number = Some(5);
+let absent_number: Option<i32> = None;  // we have to the type for None.
+
+// Option<&str>
+let some_string = Some("a string");
+```
+
+## Matching with Option<T>
+
