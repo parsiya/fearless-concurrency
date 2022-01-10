@@ -1942,13 +1942,51 @@ fn main() {
 }
 ```
 
+# Chapter 7
 
+## Packages & Crates
 
+* Crate: A binary of library.
+* Crate root: The source file the compiler starts from.
+    * `src/main.rs`: Crate root of binary crate with the same name as the package.
+        * More binary crates will be in `src/bin`.
+    * `src/lib.rs`: Crate root of library crate with the same name as the package. 
+* Package: One or more crates.
+    * Has `Cargo.toml` which describes how to build the crates.
+    * Has at most one library crate and many binary crates.
+    * Must have at least one crate.
 
+## Modules
+Modules help us organize code within a crate into groups. Also `public/private`
+items. Defined with the `mod` keyword. Modules can be nested, too.
 
+```rs
+mod front_of_house {
+    mod hosting {
+        fn add_to_waitlist() {}
 
+        fn seat_at_table() {}
+    }
+    mod serving {
+        fn take_order() {}
 
+        fn serve_order() {}
 
+        fn take_payment() {}
+    }
+}
+```
+
+`hosting` and `serving` are sibling modules. They are defined in the same module
+and have the same parent. All top level modules are children of an implicit
+module named `crate`. In this code `front_of_house` is a child of `crate`.
+
+## Paths
+How to tell Rust where to find an item in the module tree. Separator is `::`.
+
+* Absolute: Starts with the create name or `crate`.
+* Relative: Starts from the current module and uses `self`, `super`, or an
+  identifier in the current module.
 
 
 
