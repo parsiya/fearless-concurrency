@@ -1795,11 +1795,161 @@ We can use `Some` and `None` directly without importing anything.
 ```rs
 // Option<i32>
 let some_number = Some(5);
-let absent_number: Option<i32> = None;  // we have to the type for None.
+let absent_number: Option<i32> = None;  // we have to enter the type for None
 
 // Option<&str>
 let some_string = Some("a string");
 ```
 
 ## Matching with Option<T>
+We can try to write a function that extracts the value of `u32` from
+`Option<i32>` like this:
+
+```rs
+fn extract_option(o: Option<u32>) -> u32 {
+    match o {
+        Some(i) => i,
+    }
+}
+```
+
+This returns `i` for `Some(i)`, but the compiler complains about not handling
+`None`.
+
+```
+error[E0004]: non-exhaustive patterns: `None` not covered
+   --> src/main.rs:2:11
+    |
+2   |     match o {
+    |           ^ pattern `None` not covered
+    |
+```
+
+Basically, the match should cover all possible values. They are **exhaustive**.
+Here, we will have a dilemma. What should we return as `None`? `None` is the
+absence of values here. A very naive way would be returning 0. But that means
+`Some(0)` and `None` would be the same.
+
+```rs
+fn extract_option(o: Option<u32>) -> u32 {
+    match o {
+        Some(i) => i,
+        None => 0,
+    }
+}
+
+fn main() {
+    let s1 = Some(0);
+    let n1: Option<u32> = None;
+    
+    println!("{}", extract_option(s1)); // 0
+    println!("{}", extract_option(n1)); // 0
+}
+```
+
+I still don't know how to use `None`, but let's move on.
+
+Writing exhaustive matches will be boring if we only want to take action for a
+few values. This is why we have `other`. So, we can write matches like this.
+
+```rs
+match user_input {
+    1 => {
+        do1();
+        launch();
+    } // we can have a block here, too - rustfmt removes the colon here
+    2 => abort(),
+    other => try_again(other), // note how we can use `other` in the arm
+}
+```
+
+If we don't want to use the value, we can use `_` instead of `other`.
+
+```rs
+match user_input {
+    1 => {
+        do1();
+        launch();
+    }
+    2 => abort(),
+    _ => try_again(), // run try_again for all other values
+}
+```
+
+If we really don't want to do anything, we can replace `try_again()` with `()`:
+
+```rs
+match user_input {
+    1 => {
+        do1();
+        launch();
+    }
+    2 => abort(),
+    _ => (), // don't do anything for all other values
+}
+```
+
+## if let
+Well, this is very confusing!
+
+Similar to a `match` but not exhaustive. These two are supposedly the same.
+
+```rs
+let config_max = Some(3);
+match config_max {
+    Some(max) => println!("The maximum is configured to be {}", max),
+    _ => (),
+}
+```
+
+Because of the `let`, the value of `max` will be `3u8` after the `if`.
+
+```rs
+let config_max = Some(3);
+if let Some(max) = config_max {
+    println!("The maximum is configured to be {}", max);
+}
+```
+
+This gets more confusing because if we already have a `max` variable, it will be
+shadowed here.
+
+```rs
+fn main() {
+    let config_max = Some(3);
+    let max = 10;
+    println!("{}", max); // prints "10"
+
+    if let Some(max) = config_max {
+        println!("{}", max); // prints "3"
+    }
+    println!("{}", max); // prints "10"
+}
+```
+
+I should stop thinking of this as an `if`. Not sure how I can handle using it
+later when writing Rust. We can also have `else` here which is like the `_` in
+match and matches everything else.
+
+```rs
+fn main() {
+    let config_max = Some(3);
+    if let Some(max) = config_max {
+        println!("{}", max); // prints "3"
+    } else {
+        println!("{}", "not 3");
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
 
