@@ -2300,12 +2300,10 @@ respectively. Note they will be inside the `applications` directory.
 .
 ├── Cargo.lock
 ├── Cargo.toml
-├── src
-│   ├── applications
-│   │   ├── games.rs
-│   │   └── utilities.rs
-│   ├── applications.rs
-│   └── lib.rs
+└── src
+    ├── applications
+    │   ├── games.rs
+    │   └── utilities.rs
+    ├── applications.rs
+    └── lib.rs
 ```
-
-
