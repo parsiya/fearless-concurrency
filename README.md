@@ -2307,3 +2307,221 @@ respectively. Note they will be inside the `applications` directory.
     ├── applications.rs
     └── lib.rs
 ```
+
+# Chapter 8
+
+## Vectors
+`Vev<T>` or vectors. Store values of the same type sequentially in memory. All
+vector elements are destroyed when vector goes out of scope.
+
+```rs
+// empty vector of u32 values
+let mut v: Vec<u32> = Vec::new();
+// add values with push
+v.push(1);
+v.push(2);
+
+// Rust can infer the type with the vec! macro, it will be i32 here
+let v2 = vec![1, 2, 3];
+```
+
+## Read Vector Values
+There are two ways to read vector elements.
+
+1. Index
+2. `.get`
+
+Index starts from zero and is similar to other languages.
+
+```rs
+fn main() {
+    let mut v: Vec<u32> = Vec::new();
+ 
+    v.push(0);
+    v.push(1);
+    
+    let nem = v[1];
+    println!("nem = {}", nem);      // 1
+    println!("v[1] = {}", v[1]);    // 1
+    let bem = &v[1];
+    println!("^v[1] = {}", nem);    // 1
+}
+```
+
+Using `let nem = v[1];` is not really a good thing. We are looking at u32 which
+is a fixed-length type and hence it's not moved. Let's try with strings.
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    let nem = v[1];             // error here
+    println!("nem = {}", nem);
+    println!("v[1] = {}", v[1]);
+    let bem = &v[1];
+    println!("^v[1] = {}", nem);
+}
+```
+
+We get an error because we cannot move and index of a vector (`v[1]` in this
+case).
+
+```
+error[E0507]: cannot move out of index of `Vec<String>`
+  --> src/main.rs:11:15
+   |
+11 |     let nem = v[1];
+   |               ^^^^
+   |               |
+   |               move occurs because value has type `String`, which does not implement the `Copy` trait
+   |               help: consider borrowing here: `&v[1]`
+```
+
+Instead we must borrow it.
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    let nem = &v[1];    // borrow instead of move
+    println!("nem = {}", nem);      // nem = 1
+    println!("v[1] = {}", v[1]);    // v[1] = 1
+    let bem = &v[1];
+    println!("^v[1] = {}", nem);    // ^v[1] = 1
+}
+```
+
+With the `get` method we receive an `Option<T>` (`Option<String>` here).
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    let index = 0;
+    let v0 = v.get(index);
+    match v0 {
+        Some(value) => println!("v[{}] = {}", index, value),    // v[0] = 0
+        None => println!("v[{}] = None", index),
+    }
+}
+```
+
+This method is usually better because it returns `None` if the index is out of
+range. We can catch it. E.g., changing `index` to 10 gives us:
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    let index = 10;
+    let v0 = v.get(index);
+    match v0 {
+        Some(value) => println!("v[{}] = {}", index, value),
+        None => println!("v[{}] = None", index),    // v[10] = None
+    }
+}
+```
+
+However, `v[10]` using the index will panic.
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    let index = 10;
+    println!("v[{}] = {}", index, v[index]);
+    // thread 'main' panicked at 'index out of bounds: the len is 2 but the
+    // index is 10', src/main.rs:8:35
+}
+```
+
+**We cannot have both mutable and immutable references to even different
+elements of the vector**.
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    let immutable_ref = v.get(0);
+    
+    // add something to the vector
+    v.push(String::from("2"));
+    
+    // use the immutable reference <-- error
+    match immutable_ref {
+        Some(val) => println!("{}", val),
+        None => (),
+    }
+}
+```
+
+We will get an error when we use `immutable_ref` after modifying the vector.
+Even though our reference is to a specific element. We cannot modify the vector
+if we have an immutable reference to any of its elements. Because we might have
+to allocate more memory so the vector is moved in memory and the reference to
+element is not valid anymore.
+
+```
+error[E0502]: cannot borrow `v` as mutable because it is also borrowed as immutable
+  --> src/main.rs:10:5
+   |
+7  |     let immutable_ref = v.get(0);
+   |                         -------- immutable borrow occurs here
+...
+10 |     v.push(String::from("2"));
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+...
+13 |     match immutable_ref {
+   |           ------------- immutable borrow later used here
+```
+
+## Iterate over Vector Elements
+We can use a `for` loop.
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+ 
+    v.push(String::from("0"));
+    v.push(String::from("1"));
+    
+    // modify elements with mutable references
+    for s in &mut v {
+        (*s).push_str("0");
+        
+        // s.push_str("0");        
+        // also works because of automatic dereferencing
+    }
+    
+    // print all elements
+    for s in &v {
+        println!("{}", s);  // 00 10
+    }
+}
+```
+
+Because we are iterating over references we need to derefence `s`. However, we
+are calling a method on it to modify it so automatic dereferencing means we can
+just do `s.push_str(...)` and it will work.
+
+
+
+
