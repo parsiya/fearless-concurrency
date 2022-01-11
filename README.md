@@ -3,6 +3,10 @@
 * "The book": https://doc.rust-lang.org/stable/book/
 * Playground: https://play.rust-lang.org/
 
+Install Rust in WSL (from https://www.rust-lang.org/tools/install):
+
+* `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
 # Chapter 1
 
 ```
@@ -1961,25 +1965,19 @@ Modules help us organize code within a crate into groups. Also `public/private`
 items. Defined with the `mod` keyword. Modules can be nested, too.
 
 ```rs
-mod front_of_house {
-    mod hosting {
-        fn add_to_waitlist() {}
-
-        fn seat_at_table() {}
+mod applications {
+    mod games {
+        fn start() {}
     }
-    mod serving {
-        fn take_order() {}
-
-        fn serve_order() {}
-
-        fn take_payment() {}
+    mod utilities {
+        fn start_utility() {}
     }
 }
 ```
 
-`hosting` and `serving` are sibling modules. They are defined in the same module
+`games` and `utilities` are sibling modules. They are defined in the same module
 and have the same parent. All top level modules are children of an implicit
-module named `crate`. In this code `front_of_house` is a child of `crate`.
+module named `crate`. In this code `applications` is a child of `crate`.
 
 ## Paths
 How to tell Rust where to find an item in the module tree. Separator is `::`.
@@ -1988,6 +1986,326 @@ How to tell Rust where to find an item in the module tree. Separator is `::`.
 * Relative: Starts from the current module and uses `self`, `super`, or an
   identifier in the current module.
 
+```rs
+// ch07/restaurant/src/lib.rs
+mod applications {
+    mod games {
+        fn start() {}
+    }
+    mod utilities {
+        fn start_utility() {}
+    }
+}
 
+// pub makes it public, more about it later
+pub fn run_game() {
+    // absolute path
+    crate::applications::games::start();
+
+    // relative path
+    applications::games::start();
+}
+```
+
+`applications` is defined in the same level as run_game so we can start with it
+in a relative path.
+
+We cannot build this with `cargo build` because the `games` module is private.
+
+```
+error[E0603]: module `games` is private
+  --> src/lib.rs:13:26
+   |
+13 |     crate::applications::games::start();
+   |                          ^^^^^ private module
+   |
+note: the module `games` is defined here
+  --> src/lib.rs:2:5
+   |
+2  |     mod games {
+   |     ^^^^^^^^^
+```
+
+## Rust's Privacy Boundary
+Everything is private by default in Rust. We have to use `pub` to make them
+public.
+
+Parent modules cannot see items in their child modules, but child
+modules can use items in their parent modules.
+
+If we just make the `games` module public (`pub mod games`) we still get an
+error becuse `start` is still private. It must be public, too.
+
+```rs
+mod applications {
+    pub mod games {
+        pub fn start() {}
+    }
+    mod utilities {
+        fn start_utility() {}
+    }
+}
+
+// now this works
+// crate::applications::games::start();
+```
+
+Why can we call stuff in the `applications` module although it's not public?
+Because `run_game()` is defined in the same module.
+
+## Super
+Equal to `..` in the file system. We can refer to parent modules. `delete_stuff`
+is defined in `applications`. We can call it `super` from inside `games`.
+
+```rs
+mod applications {
+    pub mod games {
+        pub fn start() {}
+
+        fn delete() {
+            // call delete_stuff() from `applications`
+            super::delete_stuff();
+        }
+    }
+    mod utilities {
+        fn start_utility() {}
+    }
+
+    fn delete_stuff() {}
+}
+```
+
+## Public Structs
+We can make structs public with `pub` but the fields will stay private unless we
+manually make them public, too.
+
+```rs
+// ch07/applications/src/lib.rs
+mod applications {
+    pub mod games {
+        // public struct
+        pub struct Game {
+            pub name: String,   // public field
+            hours_played: u32,  // private field
+        }
+    }
+}
+
+pub fn create_guild_wars() -> Game {
+    applications::games::Game {
+        name: String::from("Guild Wars"),
+        hours_played: 5000,  // error here because the field is private
+    }
+}
+```
+
+We cannot access `hours_played` inside because it's a private field.
+
+```
+error[E0451]: field `hours_played` of struct `Game` is private
+  --> src/lib.rs:14:9
+   |
+14 |         hours_played: 123,
+   |         ^^^^^^^^^^^^^^^^^ private field
+```
+
+If we want to keep the field private, we need to create getters and setters for
+it. Another solution is moving the `create_calc()` function to the `games`
+module. It will be adjacent to the `Game` struct and can use its fields. This
+will work even if `Game` is not public but we probably want to use it outside of
+the module in other parts of the program.
+
+```rs
+mod applications {
+    pub mod games {
+        // public struct
+        pub struct Game {
+            name: String,
+            hours_played: u32,
+        }
+        pub fn create_guild_wars() -> Game {
+            Game {
+                name: String::from("Guild Wars"),
+                hours_played: 5000,
+            }
+        }
+    }
+}
+```
+
+## Public Enums
+Making an enum public will make all its variants public, too. We can use
+`Utility` and `Game` because `AppType` is public.
+
+```rs
+// ch07/enums/src/lib.rs
+mod applications {
+
+    pub mod app_enums {
+        // public enum
+        pub enum AppType {
+            Utility,
+            Game,
+        }
+    }
+}
+
+fn create_enums() {
+    let calc = applications::app_enums::AppType::Utility;
+    let gw = applications::app_enums::AppType::Game;
+}
+```
+
+## The use Keyword
+We can bring paths into our scope with `use`. We don't have to write the
+complete path. We can use both absolute and relative paths.
+
+```rs
+mod applications {
+    pub mod app_enums {
+        // public enum
+        pub enum AppType {
+            Utility,
+            Game,
+        }
+    }
+}
+
+// absolute path
+// use crate::applications::app_enums::AppType;
+
+// can also use relative paths
+// use applications::app_enums::AppType;
+// or use self in the relative path
+use self::applications::app_enums::AppType;
+
+fn create_enums() {
+    let calc = AppType::Utility;
+    let gw = AppType::Game;
+}
+```
+
+Note how we can use `self` in the relative path. The book uses `self` but
+removing it did not cause an issue for me.
+
+We can also bring `Utility` and `Game` directly to scope, but that is not
+recommended. By using `AppType` we show they are not locally defined and it
+helps us discover where they are defined.
+
+```rs
+// this works but not recommended
+use applications::app_enums::AppType::Utility;
+use applications::app_enums::AppType::Game;
+
+fn create_enums() {
+    let calc = Utility;
+    let gw = Game;
+}
+```
+
+> when bringing in structs, enums, and other items with use, it’s idiomatic to
+> specify the full path.
+
+If there are two items with the same name then we can `use` the parents.
+
+Or we can use the `as` keyword to bring an item to the current scope with a
+different name. Doesn't make sense here, but good for demonstration.
+
+```rs
+use applications::app_enums::AppType as ApplicationType;
+
+fn create_enums() {
+    let calc = ApplicationType::Utility;
+    let gw = ApplicationType::Game;
+}
+```
+
+## pub use
+Items brought into the current scope are private to external code. E.g., we have
+`Config` struct imported and we want code that uses are our module to be able to
+access it.
+
+```rs
+pub use configs::Config;
+
+fn use_config(c: Config) {
+    // do something
+}
+```
+
+## Nested Paths in use
+If we are using items from the same path.
+
+```rs
+mod applications {
+    pub mod games {
+        fn start() {}
+    }
+    pub mod utilities {
+        fn start_utility() {}
+    }
+}
+
+use applications::{games, utilities};
+```
+
+We can also use the glob operator `*` to import everything public under a path.
+Useful in tests but not anywhere else: `use std::collections::*;`.
+
+## Modules in Different Files
+We're gonna refactor our `applications` crate in the
+`applications_separate_files` crate.
+
+```rs
+// ch07/applications_separate_files/lib.rs
+
+// declare the `applications` module, content will be in `applications.rs`.
+mod applications;
+
+use applications::games::{create_guild_wars, Game};
+
+fn create_gw() -> Game {
+    // do something
+    create_guild_wars()
+}
+```
+
+`mod applications;` in the file tells Rust to look for the contents of this
+module in `applications.rs` (in the same file path).
+
+```rs
+// ch07/applications_separate_files/applications.rs
+pub mod games {
+    // removed
+}
+
+pub mod utilities {
+    // removed
+}
+```
+
+We could also move `games` and `utilities` into their own files.
+
+```rs
+// ch07/applications_separate_files/applications.rs
+pub mod games;
+
+pub mod utilities;
+```
+
+Then put the code in `applications/games.rs` and `applications/utilities.rs`
+respectively. Note they will be inside the `applications` directory.
+
+```
+.
+├── Cargo.lock
+├── Cargo.toml
+├── src
+│   ├── applications
+│   │   ├── games.rs
+│   │   └── utilities.rs
+│   ├── applications.rs
+│   └── lib.rs
+```
 
 
