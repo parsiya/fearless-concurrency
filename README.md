@@ -2522,6 +2522,107 @@ Because we are iterating over references we need to derefence `s`. However, we
 are calling a method on it to modify it so automatic dereferencing means we can
 just do `s.push_str(...)` and it will work.
 
+## Using an Enum to Store Multiple Types
+Vectors can only store values of the same type, but we can define an enum with
+different types and then store values of that enum type in the vector.
 
+This works if we know what types will be added to the vector at compile time.
 
+```rs
+enum SpreadsheetCell {
+    Int(i32),
+    Float(f64),
+    Text(String),
+}
+
+let row = vec![
+    SpreadsheetCell::Int(3),
+    SpreadsheetCell::Text(String::from("blue")),
+    SpreadsheetCell::Float(10.12),
+];
+```
+
+## Remove Vector Values
+We can remove the last value with `pop` and get an `Option<T>` or `None` if the
+vector is empty. 
+
+```rs
+fn main() {
+    let mut v: Vec<String> = Vec::new();
+
+    v.push(String::from("0"));
+    println!("{}", extract_vector_value(v.pop()));  // "0"
+    println!("{}", extract_vector_value(v.pop()));  // "None"
+}
+
+fn extract_vector_value(s: Option<String>) -> String {
+    match s {
+        Some(st) => st,
+        None => String::from("None"),
+    }
+}
+```
+
+There are more methods. See https://doc.rust-lang.org/std/vec/struct.Vec.html.
+
+## Strings
+Mostly talking about `String` in this section. This type is `UTF-8` encoded.
+
+```rs
+// create a new String
+let mut s1 = String::new();
+
+// convert a string literal to a String
+let s1_lit = "Guild Wars";
+let s2 = s1_lit.to_string();    // String type
+
+// directly convert a string literal to String
+let s3 = "Guild Wars".to_string();
+// we've already seen `from`, too
+let mut s4 = String::from("Guild Wars");
+
+// append a string literal to a String
+s4.push_str(" 2");  // "Guild Wars 2"
+// append a single character to a String
+s4.push('!');       // "Guild Wars 2!"
+```
+
+We can also concat String with `+`. The caveat is that first operand must be a
+`String` and second must be `&str` and the result is another `String`. The first
+operand will be moved, too.
+
+```rs
+fn main() {
+    let first = String::from("Guild Wars");
+    let second = String::from(" Rocks!");
+
+    println!("{}", first + &second);    // "Guild Wars Rocks!"
+    // first has been moved and we cannot use it anymore
+}
+```
+
+We can also use `&String` because the compiler can coerce it to `&str`. Rust
+uses a deref coercion to convert `&second` to `&second[..]`. `second` is not
+moved.
+
+> Rust Strings do not support indexing. We cannot do `st[1]`.
+
+> **Don't slice Strings**. Depending on how the String is sliced, the return
+> value could be different.
+
+We can iterate over String bytes, but each byte might not be a valid char
+depending on the length of each char encoded in UTF-8. E.g., it could be encoded
+in 2 bytes and grabbing the first byte does not give us the actual character.
+
+```rs
+for c in "whatever".bytes() {
+    println!("{}", c);
+}
+```
+
+It works here because each char in the string above is encoded as one byte in
+UTF-8.
+
+## HashMaps
+`HashMap<K, V>` maps keys of type `K` to values of type `V`.
 
