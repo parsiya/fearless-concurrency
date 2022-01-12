@@ -2626,3 +2626,79 @@ UTF-8.
 ## HashMaps
 `HashMap<K, V>` maps keys of type `K` to values of type `V`.
 
+```rs
+use std::collections::HashMap;
+
+let mut hm = HashMap::new();
+
+// by passing these values the type will be HashMap<String, i32>
+hm.insert(String::from("key0"), 0);
+hm.insert(String::from("key1"), 1);
+```
+
+We can also create a HashMap by using two vectors. One will be key and the other
+will be the values.
+
+```rs
+use std::collections::HashMap;
+
+let keys = vec![String::from("key0"), String::from("key1")];
+let values = vec![0, 1];
+
+let mut hm: HashMap<_, _> = keys.into_iter().zip(values.into_iter()).collect();
+```
+
+## HashMaps and Ownership
+Variable length values will be moved when they are stored in the HashMap.
+HashMaps are also stored on the heap because their size is unknown at compile
+time.
+
+## Reading HashMaps
+We can read the values with `.get(&key)`. Result is `Option<V>`. `Some(value)`
+if the key exists and `None` if it doesn't.
+
+```rs
+fn main() {
+    use std::collections::HashMap;
+
+    let mut hm = HashMap::new();
+    hm.insert(String::from("key0"), 0);
+    hm.insert(String::from("key1"), 1);
+
+    let val = hm.get(&String::from("key0"));
+
+    print_option(val);                          // 0
+    print_option(hm.get(&String::from("123"))); // "None"
+}
+
+fn print_option(o: Option<&i32>) {
+    match o {
+        Some(val) => println!("{}", val),
+        None => println!("None"),
+    }
+}
+```
+
+## Iterating over the HashMap
+This is similar to other languages. Be sure to pass a reference to the HashMap
+to `for`
+
+```rs
+fn main() {
+    use std::collections::HashMap;
+
+    let mut hm = HashMap::new();
+    hm.insert(String::from("key0"), 0);
+    hm.insert(String::from("key1"), 1);
+
+    let val = hm.get(&String::from("key0"));
+
+    for (k, v) in &hm {
+        println!("{}: {}", k, v);
+    }
+}
+```
+
+## Updating a Hash Map
+
+
