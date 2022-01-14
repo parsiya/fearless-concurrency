@@ -2790,6 +2790,86 @@ fn main() {
 }
 ```
 
+# Chapter 9
 
+## panic!
+Ends the program and unwinds the stack (walks back and cleans up). This is
+expensive. To prevent clean up and just abort after panic (which is quick), add
+this to `Cargo.toml`:
+
+```toml
+[profile.release]
+panic = 'abort'
+```
+
+Use the `panic!` macro:
+
+```rs
+fn main() {
+    panic!("pewpew");
+}
+
+// thread 'main' panicked at 'pewpew', src/main.rs:2:5
+// note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+```
+
+## Recoverable Errors
+The `Result` enum can be used to return values from functions that might return
+errors.
+
+```rs
+enum Result<T, E> {
+    Ok(T),      // T: type of value returned in the success case
+    Err(E),     // E: type of value returned in case of errors
+}
+```
+
+Looking at `std::fs::File::open` and we can see:
+
+* Success: `Result<File>`
+    * https://doc.rust-lang.org/stable/std/fs/struct.File.html#method.open
+* Error: `Err<std::io::Error>`
+    * https://doc.rust-lang.org/stable/std/fs/struct.OpenOptions.html#method.open
+
+```rs
+use std::fs::File;
+
+fn main() {
+    let f = File::open("hello.txt");
+
+    let f = match f {
+        Ok(file) => file,
+        Err(error) => panic!("Problem opening the file: {:?}", error),
+    };
+}
+```
+
+The code will attempt to open a file. With success, a handle to the file is
+stored in `f` and `panic!` otherwise.
+
+## Matching on Different Errors
+To act differently based on the error, we can `match` in the `Err` argument.
+
+```rs
+use std::fs::File;
+use std::io::ErrorKind;
+
+fn main() {
+    let f = File::open("hello.txt");
+
+    let f = match f {
+        Ok(file) => file,
+        Err(error) => match error.kind() {
+            ErrorKind::NotFound => match File::create("hello.txt") {
+                Ok(fc) => fc,
+                Err(e) => panic!("Problem creating the file: {:?}", e),
+            },
+            other_error => {
+                panic!("Problem opening the file: {:?}", other_error)
+            }
+        },
+    };
+}
+```
 
 
