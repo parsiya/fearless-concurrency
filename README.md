@@ -2700,5 +2700,96 @@ fn main() {
 ```
 
 ## Updating a Hash Map
+Calling `insert` with an existing key will overwrite the value for that key.
+Otherwise, it will add the key-value pair.
+
+Check if a key exists and only add it if it does not.
+
+```rs
+fn main() {
+    use std::collections::HashMap;
+
+    let mut hm = HashMap::new();
+    hm.insert(String::from("key0"), 0);
+
+    hm.entry(String::from("key0")).or_insert(-1);
+    hm.entry(String::from("key1")).or_insert(1);
+
+    println!("{:?}", hm);   // {"key0": 0, "key1": 1}
+}
+```
+
+`entry` returns an enum called `Entry`. For an existing key it looks like this:
+
+```rs
+let nem = hm.entry(String::from("key0"));
+println!({":?}", nem);
+
+// Entry(OccupiedEntry { key: "key0", value: 0, .. })
+```
+
+For a non-existing key:
+
+```rs
+let bem =  hm.entry(String::from("key1"));
+println!("{:?}", bem);
+
+// Entry(VacantEntry("key1"))
+```
+
+`or_insert` uses the return value of `entry` to only add the key/value to the
+HashMap if the key does not exist and returns a mutable reference to the value
+(old value for existing keys and the new value for new keys). Hence, we cannot
+use two return values from `or_insert` in the same scope because we will have
+two mutable references to (although different) values in the hashmap.
+
+```rs
+fn main() {
+    use std::collections::HashMap;
+
+    let mut hm = HashMap::new();
+    hm.insert(String::from("key0"), 0);
+
+    let key0 = hm.entry(String::from("key0")).or_insert(-1);
+    let key1 = hm.entry(String::from("key1")).or_insert(1); // error!
+
+    println!("{:?}", key0);
+    println!("{:?}", key1);
+}
+```
+
+We will get this error:
+
+```
+error[E0499]: cannot borrow `hm` as mutable more than once at a time
+  --> src/main.rs:8:16
+   |
+7  |     let key0 = hm.entry(String::from("key0")).or_insert(-1);
+   |                ------------------------------ first mutable borrow occurs here
+8  |     let key1 = hm.entry(String::from("key1")).or_insert(1);
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ second mutable borrow occurs here
+9  | 
+10 |     println!("{:?}", key0);
+   |                      ---- first borrow later used here
+```
+
+If we get a reference from `or_insert` we need to dereference to use it.
+
+```rs
+fn main() {
+    use std::collections::HashMap;
+
+    let mut hm = HashMap::new();
+    hm.insert(String::from("key0"), 0);
+
+    let key0 = hm.entry(String::from("key0")).or_insert(-1);
+    println!("{:?}", key0);     // 0
+
+    *key0 += 1;
+    println!("{:?}", key0);     // 1
+}
+```
+
+
 
 
