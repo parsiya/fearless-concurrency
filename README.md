@@ -2848,7 +2848,12 @@ The code will attempt to open a file. With success, a handle to the file is
 stored in `f` and `panic!` otherwise.
 
 ## Matching on Different Errors
-To act differently based on the error, we can `match` in the `Err` argument.
+To act differently based on the error, we can `match` for `error.kind()` in the
+error arm.
+
+We are checking if the kind of error is `ErrorKind::NotFound` and if so, we will
+create the file. We are also checking if the result of that also returns an
+error. For other errors we will just panic.
 
 ```rs
 use std::fs::File;
@@ -2858,12 +2863,14 @@ fn main() {
     let f = File::open("hello.txt");
 
     let f = match f {
-        Ok(file) => file,
-        Err(error) => match error.kind() {
+        Ok(file) => file,   // file exists
+        Err(error) => match error.kind() {  // check the error
+            // if file doesn't exist, create it
             ErrorKind::NotFound => match File::create("hello.txt") {
-                Ok(fc) => fc,
-                Err(e) => panic!("Problem creating the file: {:?}", e),
+                Ok(fc) => fc,   // new file was created successfully
+                Err(e) => panic!("Problem creating the file: {:?}", e), // creating a new file failed
             },
+            // all other errors
             other_error => {
                 panic!("Problem opening the file: {:?}", other_error)
             }
@@ -2872,4 +2879,90 @@ fn main() {
 }
 ```
 
+There are better ways of writing this code. We will see them in chapter 13.
+
+## unwrap and expect
+The `unwrap` method in this code will return the value if there's no error and
+calls `panic` otherwise.
+
+```rs
+use std::fs::File;
+
+fn main() {
+    let f = File::open("hello.txt").unwrap();
+}
+
+// thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Os {
+// code: 2, kind: NotFound, message: "No such file or directory" }',
+// src/main.rs:4:37
+```
+
+`except` is the same, but we can choose an error message to return along the
+default one.
+
+```rs
+use std::fs::File;
+
+fn main() {
+    let f = File::open("hello.txt").expect("panic!!!");
+}
+
+// thread 'main' panicked at 'panic!!!: Os { code: 2, kind: NotFound, message: "No
+// such file or directory" }', src/main.rs:4:37
+```
+
+## Propagating Errors
+We can return errors from our functions. Here's a convoluted way of writing
+`FromStr`.
+
+
+```rs
+use std::fs::File;
+
+fn main() {
+    match string_to_boolean(String::from("true")) { // "it's true"
+        Ok(val) => println!("it's {}", val),
+        Err(s) => println!("{}", s),
+    }
+
+    match string_to_boolean(String::from("FALse")) { // "it's false"
+        Ok(val) => println!("it's {}", val),
+        Err(s) => println!("{}", s),
+    }
+
+    match string_to_boolean(String::from("trueee")) { // "not boolean"
+        Ok(val) => println!("it's {}", val),
+        Err(s) => println!("{}", s),
+    }
+}
+
+fn string_to_boolean(s: String) -> Result<bool, String> {
+    // converts a string to boolean. true and false are converted
+    // (case-insensitive), everything else is an error
+
+    match s.to_ascii_lowercase().as_ref() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(String::from("not boolean")),
+    }
+}
+```
+
+## Shortcut for Propagating Errors
+Place a `?` after a `Result` value to pass it on. If it's `Ok` then the program
+will continue. For `Err` the function will return it.
+
+```rs
+use std::fs::File;
+use std::io;
+use std::io::Read;
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let mut s = String::new();
+
+    File::open("hello.txt")?.read_to_string(&mut s)?;
+
+    Ok(s)
+}
+```
 
