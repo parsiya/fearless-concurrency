@@ -2966,3 +2966,12 @@ fn read_username_from_file() -> Result<String, io::Error> {
 }
 ```
 
+We will return errors if either of `open` and `.read_to_string` methods
+encounter an error. The return value of the function with `?` must match
+the parent function.
+
+We can only use the `?` operator in a function that returns `Result` or `Option`
+(more but I skipped it for these notes). If the parent function returns
+`Option<T>` we can use `?` on a function inside with the same return value.
+
+
